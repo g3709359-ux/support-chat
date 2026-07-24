@@ -1,5 +1,5 @@
 (function () {
-  const BACKEND_URL = 'http://localhost:3001';
+const BACKEND_URL = 'https://support-chat-f8jt.onrender.com';
 
   const script = document.createElement('script');
   script.src = `${BACKEND_URL}/socket.io/socket.io.js`;
