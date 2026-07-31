@@ -18,9 +18,13 @@
   .msg { padding:8px 12px; border-radius:10px; max-width:60%; font-size:14px; }
   .msg.visitor { align-self:flex-start; background:#2a2c36; }
   .msg.agent { align-self:flex-end; background:#f5b400; color:#111; }
+  .msg.file-msg { padding:6px; }
+  .msg img.msg-img { max-width:100%; border-radius:8px; display:block; cursor:pointer; }
+  .msg a.file-link { display:flex; align-items:center; gap:8px; text-decoration:none; color:inherit; padding:2px 4px; }
   #chat-input { display:flex; gap:8px; padding:12px; border-top:1px solid #222; }
-  #chat-input input { flex:1; padding:10px; border-radius:8px; border:none; background:#22242c; color:#fff; }
+  #chat-input input[type="text"] { flex:1; padding:10px; border-radius:8px; border:none; background:#22242c; color:#fff; }
   #chat-input button { padding:10px 18px; border-radius:8px; border:none; background:#f5b400; cursor:pointer; font-weight:600; }
+  #attach-btn { padding:10px 14px; border-radius:8px; border:1px solid #2a2c36; background:#22242c; cursor:pointer; color:#f5b400; font-weight:600; }
 </style>
 </head>
 <body>
@@ -30,7 +34,9 @@
     <div id="chat-header">Select a conversation</div>
     <div id="chat-messages"></div>
     <div id="chat-input">
-      <input id="reply-input" placeholder="Type a reply..." />
+      <input id="reply-file-input" type="file" accept="image/*,.pdf,.doc,.docx,.txt" style="display:none;" />
+      <button id="attach-btn" title="Attach file">📎</button>
+      <input id="reply-input" type="text" placeholder="Type a reply..." />
       <button id="reply-send">Send</button>
     </div>
   </div>
@@ -42,12 +48,15 @@
 
   const conversations = {};
   let activeId = null;
+  const MAX_FILE_SIZE = 5 * 1024 * 1024;
 
   const listEl = document.getElementById('conv-list');
   const headerEl = document.getElementById('chat-header');
   const messagesEl = document.getElementById('chat-messages');
   const inputEl = document.getElementById('reply-input');
   const sendBtn = document.getElementById('reply-send');
+  const attachBtn = document.getElementById('attach-btn');
+  const fileInput = document.getElementById('reply-file-input');
 
   function renderList() {
     listEl.innerHTML = '';
@@ -55,11 +64,43 @@
       const div = document.createElement('div');
       div.className = 'conv-item' + (conv.visitorId === activeId ? ' active' : '');
       const last = conv.messages[conv.messages.length - 1];
+      const preview = last ? (last.file ? '📎 ' + last.file.name : last.text) : 'No messages yet';
       div.innerHTML = `<div class="name">Visitor</div>
-        <div class="preview">${last ? last.text : 'No messages yet'}</div>`;
+        <div class="preview">${preview}</div>`;
       div.onclick = () => { activeId = conv.visitorId; renderList(); renderChat(); };
       listEl.appendChild(div);
     });
+  }
+
+  function renderMsg(m) {
+    const row = document.createElement('div');
+    row.className = 'msg ' + m.from + (m.file ? ' file-msg' : '');
+
+    if (m.file) {
+      if (m.file.type && m.file.type.startsWith('image/')) {
+        const img = document.createElement('img');
+        img.src = m.file.dataUrl;
+        img.className = 'msg-img';
+        img.onclick = () => window.open(m.file.dataUrl, '_blank');
+        row.appendChild(img);
+      } else {
+        const link = document.createElement('a');
+        link.href = m.file.dataUrl;
+        link.download = m.file.name;
+        link.className = 'file-link';
+        link.innerHTML = `📄 <span>${m.file.name}</span>`;
+        row.appendChild(link);
+      }
+      if (m.text) {
+        const caption = document.createElement('div');
+        caption.textContent = m.text;
+        caption.style.marginTop = '6px';
+        row.appendChild(caption);
+      }
+    } else {
+      row.textContent = m.text;
+    }
+    return row;
   }
 
   function renderChat() {
@@ -67,12 +108,7 @@
     headerEl.textContent = 'Visitor';
     messagesEl.innerHTML = '';
     if (!conv) return;
-    conv.messages.forEach(m => {
-      const row = document.createElement('div');
-      row.className = 'msg ' + m.from;
-      row.textContent = m.text;
-      messagesEl.appendChild(row);
-    });
+    conv.messages.forEach(m => messagesEl.appendChild(renderMsg(m)));
     messagesEl.scrollTop = messagesEl.scrollHeight;
   }
 
@@ -102,6 +138,33 @@
 
   sendBtn.onclick = sendReply;
   inputEl.addEventListener('keydown', e => { if (e.key === 'Enter') sendReply(); });
+
+  attachBtn.onclick = () => {
+    if (!activeId) { alert('Select a conversation first.'); return; }
+    fileInput.click();
+  };
+
+  fileInput.addEventListener('change', () => {
+    const file = fileInput.files[0];
+    if (!file || !activeId) return;
+
+    if (file.size > MAX_FILE_SIZE) {
+      alert('File is too large. Max size is 5MB.');
+      fileInput.value = '';
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      socket.emit('agent_message', {
+        visitorId: activeId,
+        text: '',
+        file: { name: file.name, type: file.type, dataUrl: reader.result }
+      });
+    };
+    reader.readAsDataURL(file);
+    fileInput.value = '';
+  });
 </script>
 </body>
 </html>
