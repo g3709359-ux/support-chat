@@ -67,8 +67,8 @@
 
     panel.innerHTML = `
       <div style="padding:16px 18px;background:#1b1c24;display:flex;align-items:center;gap:12px;border-bottom:1px solid #23252e;">
-        <img src="/Binance_Logo.svg.webp" alt="Binance" style="width:38px;height:38px;border-radius:50%;
-                    background:${ACCENT};object-fit:cover;" />
+        <img src="/binance-icon-logo-png_seeklogo-598330.png" alt="Binance" style="width:38px;height:38px;border-radius:50%;
+                    background:#fff;object-fit:cover;" />
         <div style="flex:1;">
           <div style="font-weight:600;font-size:14.5px;letter-spacing:0.2px;">Binance Support</div>
           <div style="font-size:12px;color:#4ade80;display:flex;align-items:center;gap:5px;margin-top:2px;">
