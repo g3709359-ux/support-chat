@@ -173,7 +173,7 @@
 
     socket.on('init', ({ messages }) => {
       if (messages.length === 0) {
-        renderMessage({ from: 'agent', text: "Hi there. I'm here to help. What can I do for you today?" });
+        renderMessage({ from: 'agent', text: "Welcome to customer support. I’m your Binance assistant. How can I help you today?" });
       } else {
         messages.forEach(renderMessage);
       }
