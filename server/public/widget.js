@@ -97,7 +97,7 @@
                 background:${ACCENT};cursor:pointer;display:flex;align-items:center;justify-content:center;
                 transition:filter 0.15s ease;">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-            <path d="M4 12l16-8-6 8 6 8-16-8z" fill="${ACCENT_DARK}"/>
+            <path d="M20 12L4 4l6 8-6 8 16-8z" fill="${ACCENT_DARK}"/>
           </svg>
         </button>
       </div>
