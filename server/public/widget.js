@@ -2,6 +2,7 @@
   const BACKEND_URL = 'https://support-chat-f8jt.onrender.com';
   const ACCENT = '#FCD535';
   const ACCENT_DARK = '#111';
+  const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
   const script = document.createElement('script');
   script.src = `${BACKEND_URL}/socket.io/socket.io.js`;
@@ -16,7 +17,6 @@
 
     const socket = io(BACKEND_URL, { query: { role: 'visitor', visitorId } });
 
-    // Inject animation keyframes + scrollbar styling once
     const styleTag = document.createElement('style');
     styleTag.textContent = `
       @keyframes sc-pop-in {
@@ -31,8 +31,10 @@
       #sc-messages::-webkit-scrollbar-thumb { background: #333644; border-radius: 10px; }
       #sc-messages::-webkit-scrollbar-track { background: transparent; }
       #sc-bubble:hover { transform: scale(1.06); box-shadow: 0 6px 22px rgba(252,213,53,0.35); }
-      #sc-send:hover { filter: brightness(1.08); }
+      #sc-send:hover, #sc-attach:hover { filter: brightness(1.08); }
       #sc-input::placeholder { color: #6b6f7d; }
+      .sc-file-link { display:flex; align-items:center; gap:8px; text-decoration:none; }
+      .sc-img-preview { max-width: 100%; border-radius: 10px; display:block; cursor:pointer; }
     `;
     document.head.appendChild(styleTag);
 
@@ -79,6 +81,15 @@
       <div id="sc-messages" style="flex:1;overflow-y:auto;padding:16px;display:flex;
            flex-direction:column;gap:12px;background:#16171d;"></div>
       <div style="padding:12px;display:flex;gap:8px;border-top:1px solid #23252e;background:#1b1c24;">
+        <input id="sc-file-input" type="file" accept="image/*,.pdf,.doc,.docx,.txt" style="display:none;" />
+        <button id="sc-attach" title="Attach file" style="width:40px;height:40px;border-radius:10px;border:1px solid #2a2c36;flex-shrink:0;
+                background:#22242c;cursor:pointer;display:flex;align-items:center;justify-content:center;
+                transition:filter 0.15s ease;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <path d="M21 10.5l-8.4 8.4a4.5 4.5 0 01-6.36-6.36l8.4-8.4a3 3 0 014.24 4.24l-8.4 8.4a1.5 1.5 0 01-2.12-2.12l7.37-7.37"
+                  stroke="${ACCENT}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
         <input id="sc-input" placeholder="Type your message..." style="flex:1;padding:11px 14px;
                border-radius:10px;border:1px solid #2a2c36;background:#22242c;color:#fff;outline:none;
                font-size:14px;transition:border-color 0.15s ease;" />
@@ -108,6 +119,8 @@
 
     const messagesEl = panel.querySelector('#sc-messages');
     const sendBtn = panel.querySelector('#sc-send');
+    const attachBtn = panel.querySelector('#sc-attach');
+    const fileInput = panel.querySelector('#sc-file-input');
 
     function renderMessage(msg) {
       const row = document.createElement('div');
@@ -115,20 +128,52 @@
       row.style.alignSelf = isVisitor ? 'flex-end' : 'flex-start';
       row.style.background = isVisitor ? ACCENT : '#24262f';
       row.style.color = isVisitor ? ACCENT_DARK : '#e8e8ec';
-      row.style.padding = '9px 13px';
+      row.style.padding = msg.file && msg.file.type && msg.file.type.startsWith('image/') ? '6px' : '9px 13px';
       row.style.borderRadius = isVisitor ? '12px 12px 2px 12px' : '12px 12px 12px 2px';
       row.style.maxWidth = '78%';
       row.style.fontSize = '14px';
       row.style.lineHeight = '1.4';
       row.style.wordBreak = 'break-word';
-      row.textContent = msg.text;
+
+      if (msg.file) {
+        if (msg.file.type && msg.file.type.startsWith('image/')) {
+          const img = document.createElement('img');
+          img.src = msg.file.dataUrl;
+          img.className = 'sc-img-preview';
+          img.onclick = () => window.open(msg.file.dataUrl, '_blank');
+          row.appendChild(img);
+        } else {
+          const link = document.createElement('a');
+          link.href = msg.file.dataUrl;
+          link.download = msg.file.name;
+          link.className = 'sc-file-link';
+          link.style.color = isVisitor ? ACCENT_DARK : '#e8e8ec';
+          link.innerHTML = `
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+              <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" stroke="currentColor" stroke-width="2"/>
+              <path d="M14 2v6h6" stroke="currentColor" stroke-width="2"/>
+            </svg>
+            <span>${msg.file.name}</span>
+          `;
+          row.appendChild(link);
+        }
+        if (msg.text) {
+          const caption = document.createElement('div');
+          caption.textContent = msg.text;
+          caption.style.marginTop = '6px';
+          row.appendChild(caption);
+        }
+      } else {
+        row.textContent = msg.text;
+      }
+
       messagesEl.appendChild(row);
       messagesEl.scrollTop = messagesEl.scrollHeight;
     }
 
     socket.on('init', ({ messages }) => {
       if (messages.length === 0) {
-        renderMessage({ from: 'agent', text: "Welcome to customer support. I’m your Binance assistant. How can I help you today?" });
+        renderMessage({ from: 'agent', text: "Hi there. I'm here to help. What can I do for you today?" });
       } else {
         messages.forEach(renderMessage);
       }
@@ -145,5 +190,28 @@
 
     sendBtn.onclick = send;
     inputEl.addEventListener('keydown', (e) => { if (e.key === 'Enter') send(); });
+
+    attachBtn.onclick = () => fileInput.click();
+
+    fileInput.addEventListener('change', () => {
+      const file = fileInput.files[0];
+      if (!file) return;
+
+      if (file.size > MAX_FILE_SIZE) {
+        alert('File is too large. Max size is 5MB.');
+        fileInput.value = '';
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = () => {
+        socket.emit('visitor_message', {
+          text: '',
+          file: { name: file.name, type: file.type, dataUrl: reader.result }
+        });
+      };
+      reader.readAsDataURL(file);
+      fileInput.value = '';
+    });
   };
 })();
