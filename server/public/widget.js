@@ -67,10 +67,10 @@
 
     panel.innerHTML = `
       <div style="padding:16px 18px;background:#1b1c24;display:flex;align-items:center;gap:12px;border-bottom:1px solid #23252e;">
-        <div style="width:38px;height:38px;border-radius:50%;background:${ACCENT};color:${ACCENT_DARK};
-                    display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;">CS</div>
+        <img src="/Binance_Logo.svg.webp" alt="Binance" style="width:38px;height:38px;border-radius:50%;
+                    background:${ACCENT};object-fit:cover;" />
         <div style="flex:1;">
-          <div style="font-weight:600;font-size:14.5px;letter-spacing:0.2px;">Customer support</div>
+          <div style="font-weight:600;font-size:14.5px;letter-spacing:0.2px;">Binance Support</div>
           <div style="font-size:12px;color:#4ade80;display:flex;align-items:center;gap:5px;margin-top:2px;">
             <span style="width:6px;height:6px;border-radius:50%;background:#4ade80;display:inline-block;"></span>
             Online now
